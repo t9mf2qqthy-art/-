@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>弁当おかず管理</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #E0DAD0;
+    --text: #1A1714;
+    --text-sub: #6B6560;
+    --meat: #C45C2A;
+    --meat-bg: #FDF0E8;
+    --other: #2A7A5C;
+    --other-bg: #E8F5EF;
+    --accent: #C45C2A;
+    --tag-meat: #C45C2A;
+    --tag-other: #2A7A5C;
+    --warn: #B84040;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--text);
+    color: #fff;
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .term-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+  .header-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Nav tabs */
+  .nav {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 12px 4px 10px;
+    border: none;
+    background: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 12px;
+    color: var(--text-sub);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .nav-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Tabs */
+  .tab { display: none; padding: 16px; }
+  .tab.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+
+  /* Plan tab */
+  .plan-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .menu-slot {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  .menu-slot-day {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-sub);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+  }
+  .menu-slot-name {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .tag-meat { background: var(--meat-bg); color: var(--meat); }
+  .tag-other { background: var(--other-bg); color: var(--other); }
+
+  .reroll-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .reroll-btn:active { opacity: 0.75; }
+
+  .term-info {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .term-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    flex: 1;
+    text-align: center;
+  }
+  .term-chip-label {
+    font-size: 10px;
+    color: var(--text-sub);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  .term-chip-val {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Shopping tab */
+  .shop-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--text);
+    color: #fff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .shop-total-label { font-size: 13px; }
+  .shop-total-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+  }
+  .shop-total-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    font-family: 'DM Mono', monospace;
+    margin-top: 2px;
+  }
+
+  .ingredient-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .ingredient-row:last-child { border-bottom: none; }
+  .ingredient-name {
+    flex: 1;
+    font-size: 14px;
+  }
+  .ingredient-amount {
+    font-size: 12px;
+    color: var(--text-sub);
+    min-width: 50px;
+    text-align: right;
+  }
+  .ingredient-price-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .price-input {
+    width: 70px;
+    padding: 5px 6px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    text-align: right;
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .price-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .yen-label {
+    font-size: 12px;
+    color: var(--text-sub);
+  }
+
+  .per-meal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .per-meal-label { font-size: 13px; color: var(--text-sub); }
+  .per-meal-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  /* Recipe tab */
+  .recipe-card {
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .recipe-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    cursor: pointer;
+    gap: 10px;
+  }
+  .recipe-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-sub);
+    min-width: 20px;
+  }
+  .recipe-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .recipe-chevron {
+    font-size: 12px;
+    color: var(--text-sub);
+    transition: transform 0.2s;
+  }
+  .recipe-card.open .recipe-chevron { transform: rotate(180deg); }
+  .recipe-body {
+    display: none;
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .recipe-card.open .recipe-body { display: block; }
+  .recipe-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 12px 0 6px;
+  }
+  .recipe-ingredient-list {
+    list-style: none;
+  }
+  .recipe-ingredient-list li {
+    font-size: 13px;
+    padding: 3px 0;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .recipe-ingredient-list li:last-child { border-bottom: none; }
+  .recipe-steps {
+    counter-reset: step;
+    list-style: none;
+  }
+  .recipe-steps li {
+    counter-increment: step;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 6px 0 6px 28px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .recipe-steps li:last-child { border-bottom: none; }
+  .recipe-steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--meat-bg);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 18px;
+    text-align: center;
+  }
+  .warn-badge {
+    font-size: 11px;
+    background: #FFF0F0;
+    color: var(--warn);
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-top: 8px;
+    display: inline-block;
+  }
+
+  /* Settings tab */
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 14px; }
+  .setting-sub { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+  .num-stepper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .stepper-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    transition: background 0.1s;
+  }
+  .stepper-btn:active { background: var(--border); }
+  .stepper-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+    color: var(--accent);
+  }
+
+  .save-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 16px;
+    letter-spacing: 0.02em;
+    transition: opacity 0.15s;
+  }
+  .save-btn:active { opacity: 0.8; }
+
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .day-btn {
+    padding: 8px 2px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s;
+    color: var(--text-sub);
+  }
+  .day-btn.selected {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+    font-weight: 700;
+  }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>🍱 弁当おかず管理</h1>
+    <span class="term-badge" id="termBadge">TERM 1</span>
+  </div>
+  <div class="header-sub" id="headerSub">4種 × 3ターム</div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showTab('plan')">🎯 今回のプラン</button>
+  <button class="nav-btn" onclick="showTab('shop')">🛒 買い物リスト</button>
+  <button class="nav-btn" onclick="showTab('recipe')">📖 レシピ</button>
+  <button class="nav-btn" onclick="showTab('settings')">⚙️ 設定</button>
+</nav>
+
+<!-- PLAN TAB -->
+<div id="tab-plan" class="tab active">
+  <div class="card">
+    <div class="card-title">今ターム進捗</div>
+    <div class="term-info">
+      <div class="term-chip">
+        <div class="term-chip-label">TERM</div>
+        <div class="term-chip-val" id="currentTermDisp">1</div>
+      </div>
+      <div class="term-chip">
+        <div class="term-chip-label">残り回</div>
+        <div class="term-chip-val" id="remainRounds">3</div>
+      </div>
+      <div class="term-chip">
+        <div class="term-chip-label">種数/週</div>
+        <div class="term-chip-val" id="menuCountDisp">4</div>
+      </div>
+    </div>
+    <div class="progress-label" id="progressLabel">今ターム 1/3回目</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressFill" style="width:33%"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">今週のおかず</div>
+    <div class="plan-grid" id="planGrid"></div>
+    <button class="reroll-btn" onclick="advanceRound()">✦ 次の週へ進む</button>
+  </div>
+</div>
+
+<!-- SHOP TAB -->
+<div id="tab-shop" class="tab">
+  <div class="shop-total" id="shopTotalCard">
+    <div>
+      <div class="shop-total-label">今週の買い物合計</div>
+      <div class="shop-total-sub" id="shopTotalSub">おかず2食分×4種</div>
+    </div>
+    <div>
+      <div class="shop-total-price" id="shopTotal">¥—</div>
+    </div>
+  </div>
+  <div class="card" id="shopCard">
+    <div class="card-title">食材リスト（価格を編集できます）</div>
+    <div id="shopList"></div>
+    <div class="per-meal-row">
+      <div class="per-meal-label">1食あたり（おかずのみ）</div>
+      <div class="per-meal-price" id="perMeal">¥—</div>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE TAB -->
+<div id="tab-recipe" class="tab">
+  <div id="recipeList"></div>
+</div>
+
+<!-- SETTINGS TAB -->
+<div id="tab-settings" class="tab">
+  <div class="card">
+    <div class="card-title">週の設定</div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">1週間のメニュー数</div>
+        <div class="setting-sub">1〜7種を選択</div>
+      </div>
+      <div class="num-stepper">
+        <button class="stepper-btn" onclick="changeCount(-1)">−</button>
+        <div class="stepper-val" id="countVal">4</div>
+        <button class="stepper-btn" onclick="changeCount(1)">＋</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">タームの長さ</div>
+        <div class="setting-sub">12 ÷ 種数（切り上げ）で自動計算</div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--accent)" id="termLenDisp">3回</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ターム管理</div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">現在のターム</div>
+        <div class="setting-sub" id="termProgressSub">1ターム目 / 1回目</div>
+      </div>
+    </div>
+    <button class="save-btn" style="background:var(--text);margin-top:0" onclick="resetTerm()">🔄 タームをリセット</button>
+  </div>
+
+  <button class="save-btn" onclick="saveSettings()">設定を保存して再抽選</button>
+</div>
+
+<script>
+// ===== DATA =====
+const MENUS = [
+  {
+    id:1, name:"豚こま生姜焼き", type:"meat",
+    ingredients:[
+      {name:"豚こま切れ肉",amount:"200g",defaultPrice:180},
+      {name:"醤油",amount:"大さじ2",defaultPrice:5},
+      {name:"みりん",amount:"大さじ1",defaultPrice:3},
+      {name:"砂糖",amount:"小さじ1",defaultPrice:1},
+      {name:"生姜（チューブ可）",amount:"適量",defaultPrice:5},
+    ],
+    steps:[
+      "豚こまを食べやすい大きさに広げる",
+      "醤油・みりん・砂糖・生姜を混ぜてタレを作る",
+      "フライパンを中火で熱し、豚肉を炒める",
+      "肉に火が通ったらタレを加えて絡め、汁気を飛ばす",
+      "粗熱をとってからラップで2食分ずつ包み冷凍"
+    ]
+  },
+  {
+    id:2, name:"鶏むね照り焼き", type:"meat",
+    ingredients:[
+      {name:"鶏むね肉",amount:"1枚(200g)",defaultPrice:130},
+      {name:"醤油",amount:"大さじ2",defaultPrice:5},
+      {name:"みりん",amount:"大さじ2",defaultPrice:4},
+      {name:"砂糖",amount:"大さじ1",defaultPrice:2},
+    ],
+    steps:[
+      "鶏むねを厚さ1.5cmにそぎ切りにする",
+      "醤油・みりん・砂糖を混ぜてタレを作る",
+      "フライパンで鶏むねを両面焼く（中火、各3分）",
+      "タレを加えて照りが出るまで絡める",
+      "粗熱をとって冷凍"
+    ]
+  },
+  {
+    id:3, name:"サバの味噌煮", type:"other",
+    ingredients:[
+      {name:"サバ缶（水煮）",amount:"1缶",defaultPrice:100},
+      {name:"味噌",amount:"大さじ1.5",defaultPrice:8},
+      {name:"みりん",amount:"大さじ1",defaultPrice:3},
+      {name:"砂糖",amount:"小さじ1",defaultPrice:1},
+      {name:"生姜（チューブ可）",amount:"適量",defaultPrice:5},
+    ],
+    steps:[
+      "小鍋にサバ缶の汁・みりん・砂糖・生姜を入れて中火",
+      "沸いたらサバを加えて2分煮る",
+      "味噌を溶かし入れ、弱火で2分煮詰める",
+      "粗熱をとって冷凍"
+    ],
+    note:"サバ缶は水煮でも味噌煮でもOK。味噌煮缶なら味噌・砂糖は減らして調整"
+  },
+  {
+    id:4, name:"厚揚げそぼろ煮", type:"other",
+    ingredients:[
+      {name:"厚揚げ",amount:"2枚",defaultPrice:100},
+      {name:"豚ひき肉",amount:"100g",defaultPrice:90},
+      {name:"醤油",amount:"大さじ2",defaultPrice:5},
+      {name:"みりん",amount:"大さじ2",defaultPrice:4},
+      {name:"砂糖",amount:"小さじ2",defaultPrice:1},
+    ],
+    steps:[
+      "厚揚げを一口大に切る",
+      "フライパンでひき肉を炒める",
+      "厚揚げを加えてさらに炒める",
+      "醤油・みりん・砂糖を加えて汁気がなくなるまで煮絡める",
+      "粗熱をとって冷凍"
+    ]
+  },
+  {
+    id:5, name:"鶏むねチキンカツ", type:"meat",
+    ingredients:[
+      {name:"鶏むね肉",amount:"1枚(200g)",defaultPrice:130},
+      {name:"パン粉",amount:"適量",defaultPrice:15},
+      {name:"卵",amount:"1個",defaultPrice:25},
+      {name:"塩・胡椒",amount:"少々",defaultPrice:2},
+      {name:"サラダ油",amount:"大さじ4",defaultPrice:10},
+    ],
+    steps:[
+      "鶏むねを1cm厚にそぎ切り、塩胡椒する",
+      "溶き卵→パン粉の順につける",
+      "フライパンに油を多めに入れ、揚げ焼きにする（各面3〜4分）",
+      "キッチンペーパーで油を切る",
+      "粗熱をとって冷凍（ソースは食べる直前に）"
+    ],
+    note:"⚠️ 揚げ物なので油ハネに注意。フタを活用すると安全"
+  },
+  {
+    id:6, name:"豚こまポン酢炒め", type:"meat",
+    ingredients:[
+      {name:"豚こま切れ肉",amount:"200g",defaultPrice:180},
+      {name:"ポン酢",amount:"大さじ3",defaultPrice:10},
+      {name:"ごま油",amount:"小さじ1",defaultPrice:5},
+      {name:"ねぎ（あれば）",amount:"適量",defaultPrice:10},
+    ],
+    steps:[
+      "フライパンを中火で熱しごま油を引く",
+      "豚こまを炒める",
+      "火が通ったらポン酢を加えて絡める",
+      "ねぎを加えてさっと混ぜる",
+      "粗熱をとって冷凍"
+    ]
+  },
+  {
+    id:7, name:"ツナじゃがそぼろ", type:"other",
+    ingredients:[
+      {name:"ツナ缶",amount:"1缶",defaultPrice:80},
+      {name:"にんじん",amount:"1/2本",defaultPrice:30},
+      {name:"醤油",amount:"大さじ1.5",defaultPrice:4},
+      {name:"みりん",amount:"大さじ1",defaultPrice:3},
+      {name:"砂糖",amount:"小さじ1",defaultPrice:1},
+    ],
+    steps:[
+      "にんじんを細かいみじん切りにする",
+      "フライパンでにんじんを炒める",
+      "ツナ缶（油ごと）を加えてさらに炒める",
+      "醤油・みりん・砂糖を加えて汁気がなくなるまで炒り付ける",
+      "粗熱をとって冷凍"
+    ],
+    note:"じゃがいもは冷凍NGなのでにんじんで代替。食感のアクセントになる"
+  },
+  {
+    id:8, name:"麻婆ナス", type:"other",
+    ingredients:[
+      {name:"ナス",amount:"2本",defaultPrice:80},
+      {name:"豚ひき肉",amount:"100g",defaultPrice:90},
+      {name:"味噌",amount:"大さじ1",defaultPrice:6},
+      {name:"豆板醤",amount:"小さじ1/2",defaultPrice:5},
+      {name:"醤油",amount:"大さじ1",defaultPrice:3},
+      {name:"ごま油",amount:"小さじ1",defaultPrice:5},
+    ],
+    steps:[
+      "ナスを乱切りにして塩水に5分浸け、水気を切る",
+      "フライパンにごま油を熱し、ひき肉を炒める",
+      "ナスを加えてしんなりするまで炒める",
+      "味噌・豆板醤・醤油を加えて全体に絡める",
+      "粗熱をとって冷凍（ナスは冷凍で味がよく染みる）"
+    ]
+  },
+  {
+    id:9, name:"イワシ蒲焼き缶アレンジ", type:"other",
+    ingredients:[
+      {name:"イワシ蒲焼き缶",amount:"1缶",defaultPrice:100},
+      {name:"卵",amount:"2個",defaultPrice:50},
+      {name:"醤油",amount:"小さじ1",defaultPrice:2},
+      {name:"砂糖",amount:"小さじ1",defaultPrice:1},
+    ],
+    steps:[
+      "卵を溶いて醤油・砂糖を混ぜる",
+      "フライパンを熱し、イワシを缶汁ごと入れて軽く炒める",
+      "溶き卵を回し入れ、半熟で混ぜ合わせる",
+      "粗熱をとって冷凍"
+    ],
+    note:"⚠️ イワシ缶は取り扱いの少い店も。サバ缶でも代替可能"
+  },
+  {
+    id:10, name:"厚揚げ甘辛焼き", type:"other",
+    ingredients:[
+      {name:"厚揚げ",amount:"2枚",defaultPrice:100},
+      {name:"醤油",amount:"大さじ2",defaultPrice:5},
+      {name:"みりん",amount:"大さじ2",defaultPrice:4},
+      {name:"砂糖",amount:"小さじ1",defaultPrice:1},
+    ],
+    steps:[
+      "厚揚げを食べやすい大きさに切る",
+      "フライパンで両面焼き色をつける（油不要）",
+      "醤油・みりん・砂糖を合わせたタレを加えて絡める",
+      "粗熱をとって冷凍"
+    ]
+  },
+  {
+    id:11, name:"鶏むねそぼろ", type:"meat",
+    ingredients:[
+      {name:"鶏ひき肉",amount:"200g",defaultPrice:160},
+      {name:"醤油",amount:"大さじ2",defaultPrice:5},
+      {name:"みりん",amount:"大さじ2",defaultPrice:4},
+      {name:"砂糖",amount:"大さじ1",defaultPrice:2},
+      {name:"生姜（チューブ可）",amount:"適量",defaultPrice:5},
+    ],
+    steps:[
+      "フライパンに鶏ひき肉と調味料を全部入れる",
+      "菜箸4本で混ぜながら中火にかける",
+      "そぼろ状になり汁気がなくなるまで炒り続ける",
+      "粗熱をとって冷凍"
+    ]
+  },
+  {
+    id:12, name:"豚こま玉ねぎ甘辛炒め", type:"meat",
+    ingredients:[
+      {name:"豚こま切れ肉",amount:"150g",defaultPrice:135},
+      {name:"玉ねぎ",amount:"1/2個",defaultPrice:25},
+      {name:"醤油",amount:"大さじ2",defaultPrice:5},
+      {name:"みりん",amount:"大さじ1",defaultPrice:3},
+      {name:"砂糖",amount:"大さじ1",defaultPrice:2},
+    ],
+    steps:[
+      "玉ねぎを薄切りにする",
+      "フライパンで玉ねぎをしんなりするまで炒める",
+      "豚こまを加えて炒める",
+      "醤油・みりん・砂糖を加えて汁気が少なくなるまで炒める",
+      "粗熱をとって冷凍"
+    ]
+  }
+];
+
+// ===== STATE =====
+let state = {
+  menuCount: 4,
+  currentTerm: 1,
+  currentRound: 1,
+  termHistory: [], // array of arrays of menu ids used
+  currentMenus: [], // current round's menu ids
+  usedInTerm: [], // ids used so far this term
+  oddMeatFirst: true, // for odd counts, alternate which gets ceiling
+  prices: {} // menuId -> {ingredientIndex -> price}
+};
+
+function termLength() {
+  return Math.ceil(12 / state.menuCount);
+}
+
+function meatMenus() { return MENUS.filter(m => m.type === 'meat'); }
+function otherMenus() { return MENUS.filter(m => m.type === 'other'); }
+
+function getAvailable(pool, used) {
+  return pool.filter(m => !used.includes(m.id));
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickMenus() {
+  const n = state.menuCount;
+  const meat = Math.floor(n / 2);
+  const other = Math.floor(n / 2);
+  let meatCount = meat;
+  let otherCount = other;
+
+  if (n % 2 === 1) {
+    if (state.oddMeatFirst) { meatCount++; }
+    else { otherCount++; }
+  }
+
+  let availMeat = getAvailable(meatMenus(), state.usedInTerm);
+  let availOther = getAvailable(otherMenus(), state.usedInTerm);
+
+  // If not enough available, reset term
+  if (availMeat.length < meatCount || availOther.length < otherCount) {
+    state.usedInTerm = [];
+    state.currentTerm++;
+    if (n % 2 === 1) state.oddMeatFirst = !state.oddMeatFirst;
+    availMeat = meatMenus();
+    availOther = otherMenus();
+  }
+
+  const pickedMeat = shuffle(availMeat).slice(0, meatCount);
+  const pickedOther = shuffle(availOther).slice(0, otherCount);
+  const picked = shuffle([...pickedMeat, ...pickedOther]);
+
+  state.usedInTerm.push(...picked.map(m => m.id));
+  state.currentMenus = picked.map(m => m.id);
+
+  return picked;
+}
+
+function getPrice(menuId, ingIdx) {
+  if (state.prices[menuId] && state.prices[menuId][ingIdx] !== undefined) {
+    return state.prices[menuId][ingIdx];
+  }
+  return MENUS.find(m => m.id === menuId).ingredients[ingIdx].defaultPrice;
+}
+
+// ===== RENDER =====
+function renderPlan() {
+  const menus = state.currentMenus.map(id => MENUS.find(m => m.id === id));
+  const days = ['月','火','水','木','金','土','日'];
+  const grid = document.getElementById('planGrid');
+  grid.innerHTML = menus.map((m, i) => `
+    <div class="menu-slot">
+      <div class="menu-slot-day">DAY ${i+1}（${days[i] || '?'}）</div>
+      <div class="menu-slot-name">${'①②③④⑤⑥⑦⑧⑨⑩⑪⑫'[m.id-1]} ${m.name}</div>
+      <span class="tag ${m.type === 'meat' ? 'tag-meat' : 'tag-other'}">${m.type === 'meat' ? '🥩 肉' : '🐟 肉以外'}</span>
+    </div>
+  `).join('');
+
+  const tl = termLength();
+  document.getElementById('currentTermDisp').textContent = state.currentTerm;
+  document.getElementById('remainRounds').textContent = tl - ((state.currentRound - 1) % tl);
+  document.getElementById('menuCountDisp').textContent = state.menuCount;
+  document.getElementById('termBadge').textContent = `TERM ${state.currentTerm}`;
+  document.getElementById('headerSub').textContent = `${state.menuCount}種 × ${tl}ターム`;
+
+  const roundInTerm = ((state.currentRound - 1) % tl) + 1;
+  document.getElementById('progressLabel').textContent = `今ターム ${roundInTerm}/${tl}回目`;
+  document.getElementById('progressFill').style.width = `${(roundInTerm / tl) * 100}%`;
+}
+
+function renderShop() {
+  const menus = state.currentMenus.map(id => MENUS.find(m => m.id === id));
+  const list = document.getElementById('shopList');
+
+  // Aggregate ingredients by name
+  const agg = {};
+  menus.forEach(m => {
+    m.ingredients.forEach((ing, idx) => {
+      const key = m.id + '_' + idx;
+      if (!agg[key]) {
+        agg[key] = { name: ing.name, amount: ing.amount, price: getPrice(m.id, idx), menuId: m.id, ingIdx: idx };
+      }
+    });
+  });
+
+  list.innerHTML = Object.values(agg).map(ing => `
+    <div class="ingredient-row">
+      <div class="ingredient-name">${ing.name}</div>
+      <div class="ingredient-amount">${ing.amount}</div>
+      <div class="ingredient-price-wrap">
+        <input class="price-input" type="number" value="${ing.price}"
+          onchange="updatePrice(${ing.menuId}, ${ing.ingIdx}, this.value)"
+          oninput="recalcTotal()">
+        <span class="yen-label">円</span>
+      </div>
+    </div>
+  `).join('');
+
+  recalcTotal();
+
+  const n = state.menuCount;
+  document.getElementById('shopTotalSub').textContent = `おかず2食分×${n}種`;
+}
+
+function recalcTotal() {
+  const inputs = document.querySelectorAll('.price-input');
+  let total = 0;
+  inputs.forEach(inp => { total += parseInt(inp.value) || 0; });
+  document.getElementById('shopTotal').textContent = `¥${total.toLocaleString()}`;
+  const meals = state.menuCount * 2;
+  document.getElementById('perMeal').textContent = `¥${Math.round(total / meals)}`;
+}
+
+function updatePrice(menuId, ingIdx, val) {
+  if (!state.prices[menuId]) state.prices[menuId] = {};
+  state.prices[menuId][ingIdx] = parseInt(val) || 0;
+}
+
+function renderRecipe() {
+  const list = document.getElementById('recipeList');
+  list.innerHTML = MENUS.map(m => `
+    <div class="recipe-card" id="rc${m.id}">
+      <div class="recipe-header" onclick="toggleRecipe(${m.id})">
+        <span class="recipe-num">${'①②③④⑤⑥⑦⑧⑨⑩⑪⑫'[m.id-1]}</span>
+        <span class="recipe-name">${m.name}</span>
+        <span class="tag ${m.type === 'meat' ? 'tag-meat' : 'tag-other'}" style="margin-right:8px">${m.type === 'meat' ? '肉' : '肉以外'}</span>
+        <span class="recipe-chevron">▼</span>
+      </div>
+      <div class="recipe-body">
+        ${m.note ? `<div class="warn-badge">⚠️ ${m.note}</div>` : ''}
+        <div class="recipe-section-title">食材（2食分）</div>
+        <ul class="recipe-ingredient-list">
+          ${m.ingredients.map(ing => `<li><span>${ing.name}</span><span>${ing.amount}</span></li>`).join('')}
+        </ul>
+        <div class="recipe-section-title">手順</div>
+        <ol class="recipe-steps">
+          ${m.steps.map(s => `<li>${s}</li>`).join('')}
+        </ol>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleRecipe(id) {
+  const card = document.getElementById('rc' + id);
+  card.classList.toggle('open');
+}
+
+function renderSettings() {
+  document.getElementById('countVal').textContent = state.menuCount;
+  document.getElementById('termLenDisp').textContent = termLength() + '回';
+  const roundInTerm = ((state.currentRound - 1) % termLength()) + 1;
+  document.getElementById('termProgressSub').textContent = `${state.currentTerm}ターム目 / ${roundInTerm}回目`;
+}
+
+// ===== ACTIONS =====
+function advanceRound() {
+  state.currentRound++;
+  if (n % 2 === 1 && state.usedInTerm.length === 0) {
+    state.oddMeatFirst = !state.oddMeatFirst;
+  }
+  pickMenus();
+  renderPlan();
+  renderShop();
+  renderSettings();
+}
+
+// Fix: use state.menuCount not n
+function advanceRound() {
+  state.currentRound++;
+  pickMenus();
+  renderPlan();
+  renderShop();
+  renderSettings();
+}
+
+function changeCount(delta) {
+  const newVal = state.menuCount + delta;
+  if (newVal < 1 || newVal > 7) return;
+  state.menuCount = newVal;
+  document.getElementById('countVal').textContent = state.menuCount;
+  document.getElementById('termLenDisp').textContent = termLength() + '回';
+}
+
+function saveSettings() {
+  state.usedInTerm = [];
+  state.currentTerm = 1;
+  state.currentRound = 1;
+  state.oddMeatFirst = true;
+  pickMenus();
+  renderAll();
+  showTab('plan');
+}
+
+function resetTerm() {
+  state.usedInTerm = [];
+  state.currentTerm = 1;
+  state.currentRound = 1;
+  state.oddMeatFirst = true;
+  pickMenus();
+  renderAll();
+}
+
+function renderAll() {
+  renderPlan();
+  renderShop();
+  renderRecipe();
+  renderSettings();
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ===== INIT =====
+pickMenus();
+renderAll();
+</script>
+</body>
+</html>
